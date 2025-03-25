@@ -2,28 +2,72 @@ package base;
 
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.testng.ITestResult;
 import org.testng.annotations.AfterMethod;
+import org.testng.annotations.AfterSuite;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.BeforeSuite;
+
+import com.aventstack.extentreports.ExtentReports;
+import com.aventstack.extentreports.ExtentTest;
+import com.aventstack.extentreports.MediaEntityBuilder;
+
+import utils.EmailUtils;
+import utils.ExtentReportManager;
+import utils.Log;
 
 public class BaseTest {
-	
+
 	protected WebDriver driver;
+	protected static ExtentReports extent;
+	protected ExtentTest test;
 	
-	@BeforeMethod
-	public void setUp() {
-		driver = new ChromeDriver();
-		driver.manage().window().maximize();
-		driver.get("https://admin-demo.nopcommerce.com/login");
+	@BeforeSuite
+	public void setupReport() {
+		
+		extent = ExtentReportManager.getReportInstance();
 		
 	}
 	
-	@AfterMethod
-	public void tearDown() {
-		if(driver!=null) {
-	//		driver.quit();
-		}
-			
+	@AfterSuite
+	public void teardownReport() {
+		
+		extent.flush();
+		String reportPath = ExtentReportManager.reportPath;
+		System.out.println("Report Path is :"+reportPath);
+		EmailUtils.sendTestReport(reportPath);
+		
 	}
-	
+
+	@BeforeMethod
+	public void setUp() {
+
+		Log.info("Starting webDriver...");
+		driver = new ChromeDriver();
+		driver.manage().window().maximize();
+
+		Log.info("Navigating to URL...");
+		driver.get("https://admin-demo.nopcommerce.com/login");
+
+	}
+
+	@AfterMethod
+	public void tearDown(ITestResult result) {
+		
+		if(result.getStatus()==ITestResult.FAILURE) {
+			
+			String screenshotPath = ExtentReportManager.captureScreenshot(driver, "LoginFailure");
+			test.fail("Test Failed...check screenshot", 
+					MediaEntityBuilder.createScreenCaptureFromPath(screenshotPath).build());			
+		}
+		
+		
+		if (driver != null) {
+
+			Log.info("Closing browser...");
+			driver.quit();
+		}
+
+	}
 
 }
